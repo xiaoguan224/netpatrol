@@ -142,6 +142,7 @@ Jul 11 2026 15:35:38.000 R2 %%10IFNET/5/LINK_STATE: GigabitEthernet0/0/15 physic
 Jul 11 2026 15:45:35.000 R2 %%10STP/5/PORT_FORWARDING: GigabitEthernet0/0/5 changes state to forwarding
 Jul 11 2026 16:18:27.000 R1 %%10SYS/5/SYSTEM_STARTUP: The system is up and running
 Jul 11 2026 16:24:36.000 R1 %%10IFNET/5/LINK_STATE: GigabitEthernet0/0/3 physical state is UP
+Jul 11 2026 16:40:00.000 R1 %%10POWER/3/POWER_FAIL: Power supply 2 in slot 0 failed, redundancy lost, please check the module
 Jul 11 2026 17:10:57.000 R2 %%10STP/5/PORT_FORWARDING: GigabitEthernet0/0/8 changes state to forwarding
 Jul 11 2026 18:54:39.000 SW1 %%10OSPF/5/OSPF_NBR_CHANGE: Neighbor 10.0.7.1 state changes to Full
 Jul 11 2026 18:59:36.000 SW1 %%10STP/5/PORT_FORWARDING: GigabitEthernet0/0/23 changes state to forwarding

@@ -1,5 +1,7 @@
 # netpatrol · 网络设备日志智能巡检工具
 
+仓库：<https://github.com/xiaoguan224/netpatrol>
+
 一个零第三方依赖的 Python 小工具：读取华为 / eNSP 风格的路由器、交换机日志，自动完成
 **解析 → 事件分类 → 统计异常检测 → 生成巡检报告（Markdown / HTML / JSON）**。
 
@@ -14,7 +16,7 @@
 协议邻居异常  →  OSPF/BGP/VRRP 邻居 Down/主备切换关键字  →  P1
 异常时段操作  →  凌晨 0-6 点的配置/命令记录            →  P1
 日志频率突增  →  模板归一化 + 滑动窗口 + 均值 3σ 基线   →  P2
-未知事件      →  首次出现的日志模板（novelty）         →  P3
+罕见错误模板  →  错误级及以上、全量只出现一次的日志模板   →  P2
 ```
 
 ## 快速开始
@@ -22,7 +24,7 @@
 只需要 Python 3.10+，**不用 pip install 任何东西**。
 
 ```bash
-# 1) 内置样例日志跑完整流程（含 5 类埋点异常）
+# 1) 内置样例日志跑完整流程（含 6 类埋点异常）
 python -m netpatrol demo
 
 # 2) 分析自己的日志（支持多文件、HTML 报告、阈值调节）
@@ -33,15 +35,16 @@ python -m netpatrol analyze router.log --window 3 --min-fail 8 -v
 python -m unittest discover tests -v
 ```
 
-`demo` 输出示例（样例日志 161 行，全部解析成功）：
+`demo` 输出示例（样例日志 162 行，全部解析成功）：
 
 ```
-[ok] 解析 161 条事件（未识别 0 行），发现异常 9 项 P0=1 P1=5
-  [P0] 疑似暴力破解   R1 ← 192.0.2.66        x9   10 分钟内认证失败 9 次，尝试用户名: admin, dcadmin, huawei...
+[ok] 解析 162 条事件（未识别 0 行），发现异常 10 项 P0=1 P1=5
+  [P0] 疑似暴力破解   R1 ← 192.0.2.66        x9   10 分钟内来自 192.0.2.66 的认证失败 9 次，尝试用户名: admin, dcadmin...
   [P1] 接口抖动     R1/GIGABITETHERNET0/0/3  x6   5 分钟内状态翻转 6 次（UP/DOWN 交替）
-  [P1] 协议邻居/会话异常 R1 ← 10.0.0.5        x1   OSPF_NBR_DOWN: Neighbor 10.0.0.5 ...
+  [P1] 协议邻居/会话异常 R1 ← 10.0.0.5        x1   OSPF/OSPF_NBR_DOWN: Neighbor 10.0.0.5 ...
   [P1] 异常时段操作   R1                     x1   01:23 出现配置/命令操作：system-view; acl number 3999
   [P2] 日志频率突增   STP/TOPOLOGY_CHANGE    x21  5 分钟内产生 21 条日志（基线均值 1.4，阈值 7.3）
+  [P2] 罕见错误模板   R1                     x1   全量日志中仅出现一次的高级别模板：Power supply <N> ...
 [ok] 报告已写入 reports\report.md / reports\report.html
 ```
 
@@ -57,9 +60,9 @@ netpatrol/
 │   ├── report.py      # 报告层：摘要、结论建议、Markdown/HTML 渲染、可选 LLM 润色
 │   ├── __main__.py    # CLI（analyze / demo）
 │   └── __init__.py
-├── tools/make_sample.py  # 样例日志生成器（random.seed 固定，5 类埋点 + 噪声）
+├── tools/make_sample.py  # 样例日志生成器（random.seed 固定，6 类埋点 + 噪声）
 ├── samples/huawei_router_demo.log
-└── tests/test_netpatrol.py  # 11 个用例：解析 / 检测 / 端到端
+└── tests/test_netpatrol.py  # 12 个用例：解析 / 检测 / 端到端
 ```
 
 ## 实现要点
@@ -90,7 +93,7 @@ export NETPATROL_LLM_MODEL="gpt-4o-mini"
 ## 关于样例数据
 
 `samples/huawei_router_demo.log` 由 `tools/make_sample.py` 生成（`random.seed(42)`，可复现）：
-5 类人为埋入的异常 + 120 行正常噪声，格式对齐 eNSP / 华为 USG、AR 系列路由器的 `%模块/级别/代码` 结构。
+6 类人为埋入的异常 + 120 行正常噪声，格式对齐 eNSP / 华为 USG、AR 系列路由器的 `%模块/级别/代码` 结构。
 **它是模拟数据，不是真实生产日志** —— 换成你自己 eNSP 里 `display logbuffer` 导出的文本就能直接分析。
 
 ## 简历话术（可直接改）
@@ -98,9 +101,9 @@ export NETPATROL_LLM_MODEL="gpt-4o-mini"
 > **网络日志智能巡检工具 netpatrol**（个人项目 · Python · 零依赖 · GitHub）
 > 针对网络设备日志"看不过来、漏告警"的运维痛点，独立完成 **日志解析 → 事件分类 → 统计异常检测 → 巡检报告生成** 全流程。
 > 兼容华为/eNSP 三种时间戳格式与 syslog 变体，通过 IP/MAC/接口名归一化提取日志模板；实现接口抖动、SSH 暴力破解、
-> OSPF 邻居异常、异常时段配置操作、日志频率突增（均值 3σ 基线）共 5 类检测器，按 P0-P4 分级并附原始证据；
+> OSPF 邻居异常、异常时段配置操作、日志频率突增（均值 3σ 基线）、罕见高危错误模板共 6 类检测器，按 P0-P4 分级并附原始证据；
 > 自动输出 Markdown/HTML/JSON 巡检报告，支持大模型结论润色（环境变量开关，失败自动降级）。
-> 编写 11 个单元用例覆盖解析、检测与端到端场景，样例日志 161 行解析率 100%、5 类埋点异常全部检出、噪声零误报。
+> 编写 12 个单元用例覆盖解析、检测与端到端场景，样例日志 162 行解析率 100%、6 类埋点异常全部检出、噪声零误报。
 
 ## 面试考点自查
 

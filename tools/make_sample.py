@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """生成演示用样例日志（全部为脚本合成的模拟数据，不含任何真实网络信息）。
 
-埋入 5 类可被 netpatrol 检出的场景：接口抖动 / SSH 爆破 / OSPF 邻居 Down /
-凌晨异常配置操作 / 日志频率突增，外加两天跨度的正常噪声。
+埋入 6 类可被 netpatrol 检出的场景：接口抖动 / SSH 爆破 / OSPF 邻居 Down /
+凌晨异常配置操作 / 日志频率突增 / 罕见高危模板，外加两天跨度的正常噪声。
 """
 import random
 from datetime import datetime, timedelta
@@ -60,6 +60,11 @@ t = D1 + timedelta(days=1, hours=10)
 for i in range(22):
     log(t + timedelta(seconds=i * 10), "SW1", "STP", 4, "TOPOLOGY_CHANGE",
         f"Topology version changed to {100 + i}, root port GigabitEthernet0/0/{i % 8 + 1} changed")
+
+# ---- 场景6：罕见高危模板 电源模块失效（全量日志仅此一条，sev=3） ----
+t = D1 + timedelta(days=1, hours=16, minutes=40)
+log(t, "R1", "POWER", 3, "POWER_FAIL",
+    "Power supply 2 in slot 0 failed, redundancy lost, please check the module")
 
 lines.sort(key=lambda x: x[0])
 out = "\n".join(s for _, s in lines) + "\n"

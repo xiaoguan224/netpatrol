@@ -8,7 +8,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from netpatrol.core import parse_line, make_template, classify, load_events, Event
-from netpatrol.detect import detect_flapping, detect_bruteforce, detect_protocol_resets, detect_offhours, run_all
+from netpatrol.detect import (detect_flapping, detect_bruteforce, detect_protocol_resets,
+                              detect_offhours, detect_novelty, run_all)
 from netpatrol.report import to_markdown, to_html, summarize
 
 SAMPLE = Path(__file__).resolve().parent.parent / "samples" / "huawei_router_demo.log"
@@ -87,6 +88,16 @@ class TestDetectors(unittest.TestCase):
         found = detect_offhours([e])
         self.assertEqual(len(found), 1)
 
+    def test_novelty_template(self):
+        rare = ev(datetime(2026, 7, 11, 16, 40, 0), "R1", "POWER", 3, "POWER_FAIL",
+                  "Power supply 2 in slot 0 failed, redundancy lost")
+        repeat = [ev(datetime(2026, 7, 11, 8, i, 0), "R1", "DEV", 4, "CPU_USAGE",
+                     f"CPU usage is {40 + i}%, threshold is 80%") for i in range(3)]
+        found = detect_novelty([rare] + repeat)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].kind, "罕见错误模板")
+        self.assertIn("<N>", found[0].detail)
+
 
 class TestEndToEnd(unittest.TestCase):
     def test_sample_log_finds_all_planted_scenarios(self):
@@ -95,7 +106,8 @@ class TestEndToEnd(unittest.TestCase):
         self.assertGreater(len(events), 150)
         findings = run_all(events)
         kinds = {f.kind for f in findings}
-        for expected in ["接口抖动", "疑似暴力破解", "协议邻居/会话异常", "异常时段操作", "日志频率突增"]:
+        for expected in ["接口抖动", "疑似暴力破解", "协议邻居/会话异常", "异常时段操作",
+                         "日志频率突增", "罕见错误模板"]:
             self.assertIn(expected, kinds, f"未检出埋点场景: {expected}")
 
     def test_report_generation(self):
