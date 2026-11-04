@@ -125,7 +125,13 @@ def detect_bruteforce(events: list[Event], window_min: int = 10, min_fail: int =
 
 
 def detect_burst(events: list[Event], bucket_min: int = 5, k: float = 3.0, min_count: int = 8) -> list[Finding]:
-    """频率突增：以 bucket 分桶计数，超过 均值+kσ 判为异常（在线基线）。"""
+    """频率突增：按 bucket_min 分钟分桶计数，某桶超过「其余桶均值 + kσ」判为异常。
+
+    两处刻意的设计，是为了不让突发把自己藏起来：
+    - 空桶按 0 计入基线。只统计"有日志的桶"会把大段空闲时间无视掉，均值偏高。
+    - 基线用 leave-one-out（剔除待判定的那个桶）算。若把突发自身算进均值和 σ，
+      突发越猛基线越高，真机日志上就出现过 44 条的桶因自身把阈值抬到 65 而漏报。
+    """
     timed = [e for e in events if e.ts]
     if len(timed) < bucket_min * 2:
         return []
@@ -133,23 +139,29 @@ def detect_burst(events: list[Event], bucket_min: int = 5, k: float = 3.0, min_c
     buckets: dict[int, list[Event]] = defaultdict(list)
     for e in timed:
         buckets[int((e.ts - t0).total_seconds() // (bucket_min * 60))].append(e)
-    counts = {b: len(v) for b, v in buckets.items()}
-    if len(counts) < 3:
+    span = max(buckets) + 1
+    if span < 3:  # 时间跨度都不足 3 个桶，谈不上基线
         return []
-    mean = statistics.fmean(counts.values())
-    stdev = statistics.pstdev(list(counts.values())) or 0.001
-    thr = mean + k * stdev
+    counts = [len(buckets.get(i, ())) for i in range(span)]
     out = []
     for b, evs in sorted(buckets.items()):
-        if len(evs) >= min_count and len(evs) > thr:
-            top = Counter(f"{e.module}/{e.code}" for e in evs).most_common(3)
-            start = t0 + timedelta(minutes=bucket_min * b)
-            out.append(Finding(
-                kind="日志频率突增", severity="P2", target="、".join(h for h, _ in top),
-                count=len(evs), first=evs[0].ts, last=evs[-1].ts,
-                detail=f"{start:%m-%d %H:%M} 起 {bucket_min} 分钟内产生 {len(evs)} 条日志（基线均值 {mean:.1f}，阈值 {thr:.1f}），事件集中：{top}",
-                evidence=[f"{c.ts:%H:%M:%S} {c.module}/{c.code}: {c.msg[:60]}" for c in evs[:6]],
-            ))
+        if len(evs) < min_count:
+            continue
+        rest = counts[:b] + counts[b + 1:]
+        mean = statistics.fmean(rest)
+        stdev = statistics.pstdev(rest) or 0.001
+        thr = mean + k * stdev
+        if len(evs) <= thr:
+            continue
+        top = Counter(f"{e.module}/{e.code}" for e in evs).most_common(3)
+        start = t0 + timedelta(minutes=bucket_min * b)
+        out.append(Finding(
+            kind="日志频率突增", severity="P2", target="、".join(h for h, _ in top),
+            count=len(evs), first=evs[0].ts, last=evs[-1].ts,
+            detail=f"{start:%m-%d %H:%M} 起 {bucket_min} 分钟内产生 {len(evs)} 条日志"
+                   f"（基线取自其余 {len(rest)} 个时间桶（含空桶），均值 {mean:.1f}，阈值 {thr:.1f}），事件集中：{top}",
+            evidence=[f"{c.ts:%H:%M:%S} {c.module}/{c.code}: {c.msg[:60]}" for c in evs[:6]],
+        ))
     return out
 
 

@@ -9,6 +9,11 @@ venv/
 reports/
 out/
 
+# 真实设备日志：带设备名、内网 IP、账号，不推到公网仓库
+logs/
+reports_real/
+ensp_lab/
+
 # 本地密钥/环境
 .env
 *.key

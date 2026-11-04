@@ -1,0 +1,24 @@
+%Sep  2 2026 10:11:12+08:00 R1 %%10SHELL/6/CMDRECORD(l)[0]:Command=display logbuffer;Predefined command -View=View.
+#Jul 10 2026 08:23:45:100 R1 %%10IFNET/4/LINK_STATE(l)[12]:The link IETF on GigabitEthernet0/0/1 changed to UP.
+2026/07/10 08:24:02.123 SW1 %%10SSH2/4/SFTP_AUTH_FAIL(l)[17]:Source user admin attempts to login through SSH failed, source ip is 192.0.2.66.
+2026-07-10 08:24:31 R2 %%10OSPF/3/NBR_CHG(d)[5]:Neighbor 10.0.10.1 on GigabitEthernet0/0/1 changed to Down.
+Jul 10 08:25:00 R1 %%10IFNET/4/LINK_STATE(l)[20]:The link IETF on GigabitEthernet0/0/2 changed to DOWN.
+<134>Jul 10 2026 08:26:12 R1 %%10SYS/3/REBOOT(l)[1]:The system will reboot in 30 seconds.
+[R1]Jul 10 2026 08:27:03 R1 %%10SECE/4/SECE_LOCAL_ATTACK(s)[2]:Local attack detected, source ip is 192.0.2.66.
+2026/07/10 08:28:00 USG1 %%10IPSEC/5/TUNNEL_UP(l)[3]:IPsec tunnel to 203.0.113.9 was established.
+<R1>display logbuffer
+#
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 5.170 (AR1220 V200R003C00SP800)
+  ---- More ----
+% Invalid command found at '^' position.
+Log buffer: 8/1000 messages
+Nov  3 2026 17:37:30-08:00 R3 %%01PHY/1/PHY(l)[6]:    GigabitEthernet0/0/1: chan
+ge status to up
+Logging buffer configuration and contents : enabled
+Allowed max buffer size : 1024
+Actual buffer size : 512
+Channel number : 4 , Channel name : logbuffer
+Dropped messages : 0
+Overwritten messages : 0
+Current messages : 6

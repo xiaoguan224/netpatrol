@@ -21,7 +21,7 @@ def cmd_analyze(args) -> int:
         if not p.exists():
             print(f"[!] 文件不存在: {p}", file=sys.stderr)
             return 2
-    events, unparsed = load_events(paths)
+    events, unparsed, skipped = load_events(paths)
     if not events:
         print("[!] 没有解析出任何事件，请检查日志格式", file=sys.stderr)
         return 1
@@ -40,7 +40,9 @@ def cmd_analyze(args) -> int:
     if args.html:
         (out / "report.html").write_text(to_html(md, events, findings), encoding="utf-8")
     s = summarize(events, findings)
-    print(f"[ok] 解析 {s['total_events']} 条事件（未识别 {len(unparsed)} 行），"
+    rate = 100.0 * len(events) / (len(events) + len(unparsed)) if (events or unparsed) else 0.0
+    print(f"[ok] 解析 {s['total_events']} 条事件（未识别 {len(unparsed)} 行，"
+          f"跳过非日志行 {len(skipped)} 行，解析率 {rate:.1f}%），"
           f"发现异常 {s['findings_total']} 项 "
           f"P0={s['findings_by_sev'].get('P0', 0)} P1={s['findings_by_sev'].get('P1', 0)}")
     for f in findings[:8]:
